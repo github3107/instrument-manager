@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>I N S T R U M E N T  Reference Data</title>
+  </head>
+  <body style="margin-left: 10px; margin-right: 10px">
+    <h1>I N S T R U M E N T  Reference Data</h1>
+    <hr/>
+    <div id="instrumentCount">Current instrument count: 0</div>
+    <div id="message" style='color:blue'>
+    </div>     
+    
+    <hr/>
+    <div>Add or search Instrument:</div>
+    <form id="createInstrumentForm">
+    <table>
+        <tr>
+            <td>Cusip: </td>
+            <td><input type="text" id="newInstrumentCusip"/> </td>
+        </tr>
+        
+        <tr>
+            
+            <td>ISIN: </td>
+            <td><input type="text" id="newInstrumentISIN"/>  </td>
+        </tr>
+        <tr>
+                <td>Coupon: </td>
+                <td><input type="text" id="newInstrumentCoupon"/>  </td>
+        </tr>
+        <tr>
+                <td>Maturity: </td>
+                <td><input type="text" id="newInstrumentMaturity"/>  </td>
+        </tr>
+        <tr>
+                <td>Type: </td>
+                <td><input type="text" id="newInstrumentType"/>  </td>
+        </tr>
+        <tr>
+            <td colspan="3">
+                    <input type="button" value="Create Instrument" onclick="createInstrument()"/>
+                    <input type="button" value="Search" onclick="searchInstruments()"/>
+            </td>
+        </tr>
+    </table>
+    </form>
+    <hr/>
+    <div>Create Random instruments:</div>
+    <div>
+        <input type="text" id="newCount"> <input type="button" value="Create Bulk Instruments" onclick="createInstruments()">
+        <input type="button" value="Delete all" onclick="deleteInstruments()"> 
+    </div>
+    
+    <hr/>
+    Instrument Details:
+    <div id="currentInstruments">
+        <table id="table">
+            <tr>
+                <th>Instrument Cusip</th>
+                <th>Instrument ISIN</th>
+                <th>Instrument Coupon</th>
+                <th>Instrument Maturity</th>
+                <th>Instrument Type</th>
+            </tr>
+        </table>
+    </div>
+    <script language="JavaScript">
+
+        class Instrument{
+            constructor(instrumentCusip, instrumentISIN, instrumentCoupon, instrumentMaturity, instrumentType){
+                this.instrumentCusip=instrumentCusip;
+                this.instrumentISIN=instrumentISIN;
+                this.instrumentCoupon=instrumentCoupon;
+                this.instrumentMaturity=instrumentMaturity;
+                this.instrumentType=instrumentType;
+            }     
+        }
+
+        var id = 100;
+
+        makeRequest('/instruments');
+        
+        function makeRequest(target){
+            var xmlhttp = new XMLHttpRequest();
+            xmlhttp.onreadystatechange = function() {
+                if (xmlhttp.readyState == XMLHttpRequest.DONE) {   // XMLHttpRequest.DONE == 4
+                if (xmlhttp.status == 200) {
+                    
+                    //alert(xmlhttp.responseText);
+                    
+                    if(target=='/instruments'){
+                        var rowIndex=0;
+                        document.getElementById("currentInstruments").innerHTML="";
+                        document.getElementById("currentInstruments").innerHTML='<table id="table"> <tr> <th>Instrument Cusip</th> <th>Instrument ISIN</th> <th>Instrument Coupon</th> <th>Instrument Maturity</th> <th>Instrument Type</th> </tr>  </table>';
+                        table=document.getElementById('table');
+                        JSON.parse(xmlhttp.responseText).forEach(function(value, index){
+                            var row = table.insertRow(rowIndex+1);
+                            var instrumentCusip = row.insertCell(0);
+                            var instrumentISIN = row.insertCell(1);
+                            var instrumentCoupon = row.insertCell(2);
+                            var instrumentMaturity = row.insertCell(2);
+                            var instrumentType = row.insertCell(2);
+
+                            instrumentCusip.innerHTML=value.instrumentCusip;
+                            instrumentISIN.innerHTML=value.instrumentISIN;
+                            instrumentCoupon.innerHTML=value.instrumentCoupon;
+                            instrumentMaturity.innerHTML=value.instrumentMaturity;
+                            instrumentType.innerHTML=value.instrumentType;
+                            rowIndex=rowIndex+1;
+                        });
+                        document.getElementById('instrumentCount').innerHTML='Current instrument count: '+rowIndex;
+                    }else{ 
+                        document.getElementById('message').innerHTML=xmlhttp.responseText;
+                        //setMessageTimer();    
+                        if(target=='/createInstrument' || target=='/deleteInstruments'){
+                            //refresh the display
+                            makeRequest('/instruments');        
+                        }           
+                    }
+                }
+                else if (xmlhttp.status == 400) {
+                    alert('There was an error 400');
+                }
+                else {
+                    alert('something else other than 200 was returned');
+                }
+                }
+            };
+
+            if(target=='/instruments'){
+                xmlhttp.open("GET", target, true);
+                xmlhttp.send();
+            }else if(target=='/createInstrument'){
+                var b = new Instrument(document.getElementById("newInstrumentCusip").value, 
+                            document.getElementById("newInstrumentISIN").value, 
+                            document.getElementById("newInstrumentCoupon").value,
+                            document.getElementById("newInstrumentMaturity").value,
+                            document.getElementById("newInstrumentType").value);
+                sendRequest(target, xmlhttp, b);
+            }else if(target=='/createInstruments'){
+                var b = new Instrument("", "", "");
+                
+                b.instrumentCusip="Cusip"+id;
+                b.instrumentISIN="ISIN"+id;
+                b.instrumentCoupon="Coupon"+id;
+                b.instrumentMaturity="Coupon"+id;
+                b.instrumentType="Coupon"+id;
+                id = id+1;
+                sendRequest(target, xmlhttp, b);
+
+            }else if(target=='/searchInstruments' || target=='/deleteInstruments'){
+                xmlhttp.open("POST", target, true);
+                xmlhttp.send();
+            }
+        }
+
+        function sendRequest(target, xmlhttp, instrument){
+                xmlhttp.open("POST", target, true);
+                xmlhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+                xmlhttp.send(JSON.stringify(instrument));
+        }
+
+        function createInstrument(){
+            makeRequest('/createInstrument');
+        }
+
+        function setMessageTimer(){
+            setTimeout(clearMessage, 2000);
+        }
+
+                
+        function deleteInstruments(){
+            makeRequest('/deleteInstruments');
+        }
+
+        function createInstruments(){
+            var size = parseInt(document.getElementById("newCount").value);
+            for(var i=0; i<size; i++){
+                makeRequest('/createInstruments');
+            }            
+        }
+
+        function searchInstruments(){
+            makeRequest('/searchInstruments');
+        }
+
+        function clearMessage(){
+            document.getElementById('message').innerHTML="";
+        }
+
+    </script>
+    <hr/>
+  </body>
+</html>
